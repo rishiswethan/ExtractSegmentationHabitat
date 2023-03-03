@@ -24,19 +24,11 @@ import habitat_sim
 from habitat_sim.utils import common as utils
 from habitat_sim.utils import viz_utils as vut
 
-# %cd /content/habitat-sim
-
-# if "google.colab" in sys.modules:
-#     # This tells imageio to use the system FFMPEG that has hardware acceleration.
-#     os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
 
 #####################################################
-# repo = git.Repo(".", search_parent_directories=True)
 dir_path = "/home/rishi/programming/AI/experiments/datasets_extractor/"
-# %cd $dir_path
 data_path = os.path.join(dir_path, "data")
-# @markdown Optionally configure the save path for video output:
-output_directory = "output/"  # @param {type:"string"}
+output_directory = "output/"
 output_path = os.path.join(dir_path, output_directory)
 if not os.path.exists(output_path):
     os.mkdir(output_path)
@@ -337,10 +329,6 @@ def recursively_get_nearby_points(
         return nearby_points
 
 
-# nearby_points = recursively_get_nearby_points([5, 5], search_pixel_radius=2, recursion_depth=0)
-# print(nearby_points)
-# print(len(nearby_points))
-# sys.exit(0)
 def make_border_of_mask(
         mask_arr,
         mask_number=1,
