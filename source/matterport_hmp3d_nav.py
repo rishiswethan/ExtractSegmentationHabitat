@@ -1,5 +1,3 @@
-# @title Colab Setup and Imports { display-mode: "form" }
-# @markdown (double click to see the code)
 
 import math
 import os
@@ -244,12 +242,10 @@ def get_topdown_map(
     if not sim.pathfinder.is_loaded:
         print("Pathfinder not initialized, aborting.")
     else:
-        # @markdown You can get the topdown map directly from the Habitat-sim API with *PathFinder.get_topdown_view*.
         # This map is a 2D boolean array
         sim_topdown_map = sim.pathfinder.get_topdown_view(meters_per_pixel, height)
 
         if display:
-            # @markdown Alternatively, you can process the map using the Habitat-Lab [maps module](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/utils/visualizations/maps.py)
             hablab_topdown_map = maps.get_topdown_map(
                 sim.pathfinder, height, meters_per_pixel=meters_per_pixel
             )
@@ -264,8 +260,7 @@ def get_topdown_map(
 
 
 def get_unique_heights(sim):
-    # @markdown A random point on the NavMesh can be queried with *get_random_navigable_point*.
-    pathfinder_seed = 1  # @param {type:"integer"}
+    pathfinder_seed = 1
     sim.pathfinder.seed(pathfinder_seed)
 
     # get 50 random navigable points and get all the unique heights
@@ -394,21 +389,15 @@ def get_all_images(
         print("Points", hablab_topdown_map, hablab_topdown_map.shape)
         # display_map(sim_topdown_view, key_points=random_nav_points)
 
-        # find index of all 1's in the map
-
+        # get the points which are on the border of the island and increase the size of the border so that it is avoided
         island_border_points = np.argwhere(hablab_topdown_map == 2)
         print("island border points", len(island_border_points))
         hablab_topdown_map[hablab_topdown_map == 2] = 1
         print("hablab_topdown_map", np.unique(hablab_topdown_map))
 
-        # plt.imshow(hablab_topdown_map)
-        # plt.show()
-
         # add neighbouring points to the neighbouring points list to bad points
         hablab_topdown_map_b = make_border_of_mask(hablab_topdown_map, mask_number=1, border_mask_number=2, border_size=TOPDOWN_MAP_BORDER_PIXELS).copy()
         print("hablab_topdown_map_b", np.unique(hablab_topdown_map_b))
-        # plt.imshow(hablab_topdown_map_b)
-        # plt.show()
 
         bad_points = list(np.argwhere(hablab_topdown_map_b == 2))
         print("Nearby neighbour points", len(bad_points), bad_points[:10])
@@ -458,14 +447,11 @@ def get_all_images(
             real_points[i] = [point[0], height, point[1]]
         real_points = np.array(real_points)
 
-        display_path_agent_renders = True  # @param{type:"boolean"}
+        display_path_agent_renders = True
         if display_path_agent_renders:
             print("Rendering observations at path points: num_points = " + str(len(real_points)))
-            # tangent = np.array([real_points[1][0] - real_points[0][0], real_points[1][1] - real_points[0][1]])
             agent_state = habitat_sim.AgentState()
             for ix, point in enumerate(real_points):
-                # if ix < 10:
-                #     continue
                 if ix < len(real_points) - 1:
                     point = np.array(point)
                     print("Point: " + str(point))
