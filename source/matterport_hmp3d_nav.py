@@ -41,8 +41,8 @@ output_path = os.path.join(dir_path, output_directory)
 if not os.path.exists(output_path):
     os.mkdir(output_path)
 
-# hmp3d_glb_path_v2 = "/home/rishi/programming/AI/experiments/datasets_extractor/data/fresh_mattterport_example/data/scene_datasets/hm3d/minival/00800-TEEsavR23oF/TEEsavR23oF.basis.glb"
-hmp3d_glb_path_v2 = "/home/rishi/programming/AI/experiments/datasets_extractor/data/fresh_mattterport_example/data/scene_datasets/hm3d/minival/00808-y9hTuugGdiq/y9hTuugGdiq.basis.glb"
+hmp3d_glb_path_v2 = "/home/rishi/programming/AI/experiments/datasets_extractor/data/fresh_mattterport_example/data/scene_datasets/hm3d/minival/00800-TEEsavR23oF/TEEsavR23oF.basis.glb"
+# hmp3d_glb_path_v2 = "/home/rishi/programming/AI/experiments/datasets_extractor/data/fresh_mattterport_example/data/scene_datasets/hm3d/minival/00808-y9hTuugGdiq/y9hTuugGdiq.basis.glb"
 hmp3d_scene_dataset_path_v2 = "/home/rishi/programming/AI/experiments/datasets_extractor/data/fresh_mattterport_example/data/scene_datasets/hm3d/minival/hm3d_annotated_minival_basis.scene_dataset_config.json"
 
 org_mp_glb_path = "/home/rishi/programming/AI/experiments/datasets_extractor/data/matterport_org_habitat/mp3d_habitat/mp3d/1LXtFkjw3qL/1LXtFkjw3qL.glb"
@@ -55,14 +55,18 @@ navmesh_path = glb_path.replace(".glb", ".navmesh")
 scene_file_def = glb_path
 scene_dataset_json_def = scene_dataset_path
 
+
+############################################################################################################
 rgb_sensor = True
 depth_sensor = True
 semantic_sensor = True
 
 turn_angle = 45.0
 
-meters_per_pixel = .15
-height = 1
+meters_per_pixel = .25
+TOPDOWN_MAP_BORDER_PIXELS = 2  # in pixels
+NEARBY_POINTS_REJECTION_RADIUS = 4  # in pixels
+height = 1  # in meters
 
 DEF_SETTINGS = {
     "width": 1024,  # Spatial resolution of the observations
@@ -163,11 +167,12 @@ def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
     plt.show()
 
 
-def print_scene_recur(scene, label_lists=LABEL_LISTS, verbose=False):
-    print(
-        f"House has {len(scene.levels)} levels, {len(scene.regions)} regions and {len(scene.objects)} objects"
-    )
-    print(f"House center:{scene.aabb.center} dims:{scene.aabb.sizes}")
+def get_all_masks(scene, label_lists=LABEL_LISTS, verbose=False):
+    if verbose:
+        print(f"House has {len(scene.levels)} levels, {len(scene.regions)} regions and {len(scene.objects)} objects")
+        print(f"House center:{scene.aabb.center} dims:{scene.aabb.sizes}")
+
+    label_lists["unknown"] = ["unknown"]
 
     label_name_to_seg_indices = {}
     for label in label_lists:
@@ -214,7 +219,7 @@ def display_map(topdown_map, key_points=None):
     if key_points is not None:
         for point in key_points:
             plt.plot(point[0], point[1], marker=".", markersize=4, alpha=0.8)
-    plt.show(block=False)
+    plt.show()
 
 
 def init_scene(scene_file, scene_dataset_file=scene_dataset_json_def, sim_settings=DEF_SETTINGS):
@@ -224,7 +229,7 @@ def init_scene(scene_file, scene_dataset_file=scene_dataset_json_def, sim_settin
     cfg = make_cfg(sim_settings)
     sim = habitat_sim.Simulator(cfg)
 
-    print(print_scene_recur(sim.semantic_scene))
+    print(get_all_masks(sim.semantic_scene, verbose=True))
 
     agent = sim.initialize_agent(sim_settings["default_agent"])
     agent_state = habitat_sim.AgentState()
@@ -289,7 +294,7 @@ def get_unique_heights(sim):
     unique_heights = []
     unique_heights_prefix = []
     for height in random_nav_points_heights:
-        if int(height * 10) not in unique_heights_prefix:
+        if int(height) not in unique_heights_prefix:
             unique_heights.append(height)
             unique_heights_prefix.append(int(height * 10))
 
@@ -360,6 +365,7 @@ def make_border_of_mask(
 
 def get_all_images(
         sim,
+        agent,
         scene_name,
         meters_per_pixel=meters_per_pixel,
         turn_angle=turn_angle,
@@ -389,8 +395,7 @@ def get_all_images(
         os.makedirs(os.path.join(save_folder + "masks", scene_name))
 
     for i, height in enumerate(random_nav_points_heights):
-        # if i > 0:
-        #     continue
+        print("Height: " + str(height) + " (" + str(i + 1) + "/" + str(len(random_nav_points_heights)) + ")")
 
         height_points_list[height] = []
         sim_topdown_view = sim.pathfinder.get_topdown_view(meters_per_pixel, height)
@@ -412,7 +417,7 @@ def get_all_images(
         # plt.show()
 
         # add neighbouring points to the neighbouring points list to bad points
-        hablab_topdown_map_b = make_border_of_mask(hablab_topdown_map, mask_number=1, border_mask_number=2, border_size=3).copy()
+        hablab_topdown_map_b = make_border_of_mask(hablab_topdown_map, mask_number=1, border_mask_number=2, border_size=TOPDOWN_MAP_BORDER_PIXELS).copy()
         print("hablab_topdown_map_b", np.unique(hablab_topdown_map_b))
         # plt.imshow(hablab_topdown_map_b)
         # plt.show()
@@ -477,12 +482,6 @@ def get_all_images(
                     point = np.array(point)
                     print("Point: " + str(point))
 
-                    if sim.pathfinder.is_navigable(point):
-                        print("Navigable")
-                    else:
-                        print("Not navigable")
-                        continue
-
                     agent_state.position = point
                     tangent = real_points[ix + 1] - point
                     #
@@ -507,23 +506,28 @@ def get_all_images(
                     for i in range(num_turns):
                         observations = sim.step("turn_right")
 
-                        rgb = observations["color_sensor"]
+                        rgb = observations["color_sensor"][..., :3]
                         semantic = observations["semantic_sensor"]
 
-                        print("rgb", rgb.shape, "semantic", semantic.shape)
+                        print(str(ix) + "/" + str(len(real_points)) + "-" +str(i * turn_angle) + "deg", "rgb", rgb.shape, "semantic", semantic.shape)
+
                         # get semantic indices and labels
-
-                        # print(sim.semantic_scene.objects)
-                        # print(sim.semantic_scene)
-                        # print(sim.semantic_scene.levels)
-                        # print(sim.semantic_scene.r)
-                        object_ids = print_scene_recur(sim.semantic_scene)
+                        object_ids = get_all_masks(sim.semantic_scene)
                         mask = np.zeros_like(semantic, dtype=np.uint8)
-
-
                         for label in LABEL_MASK_OUTPUT_NUMBER:
                             for seg_index in object_ids[label]:
                                 mask[semantic == seg_index] = LABEL_MASK_OUTPUT_NUMBER[label]
+
+                        # reject if too many unknowns pixels. This is to reject image when they are out of the scene
+                        num_unknown = np.count_nonzero(semantic == 0)
+
+                        unknown_reject_threshold = 0.15
+                        mask_pixels = mask.shape[0] * mask.shape[1]
+                        if num_unknown / mask_pixels > unknown_reject_threshold:
+                            print(f"Too many unknown pixels: {num_unknown / mask_pixels * 100:.2f}%", "num_unknown", num_unknown, "mask_pixels", mask_pixels, "rejecting...")
+                            continue
+                        else:
+                            print(f"Unknown pixels: {num_unknown / mask_pixels * 100:.2f}%", "num_unknown", num_unknown, "mask_pixels", mask_pixels)
 
                         # clean mask
                         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((10, 10), np.uint8))
@@ -534,9 +538,65 @@ def get_all_images(
                         cv2.imwrite(os.path.join(save_folder + "images", sub_folder_1, sub_folder_2, file + ".jpg"), cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
                         cv2.imwrite(os.path.join(save_folder + "masks", sub_folder_1, sub_folder_2, file + ".png"), mask)
 
-                        if display:
-                            display_sample(rgb_obs=rgb, semantic_obs=mask)
+                        # if display:
+                        #     display_sample(rgb_obs=rgb, semantic_obs=semantic)
 
 
-sim, agent = init_scene(scene_file=scene_file_def)
-get_all_images(sim, scene_name=scene_file_def.split(os.sep)[-2], display=False)
+# function only deletes the contents of the folder of each scene, and not the folder itself. Delete all folders manually if needed in train or val folder
+def get_all_scenes(
+        dataset_main_path="/media/rishi/34D61BBAD61B7AF6/matterport/hm3d/scene_datasets/hm3d/",
+        save_folder="/media/rishi/887C886A7C88553A/matterport_habitat_extracted/"
+):
+    def _get_scene_data(scene_file, config_file, save_folder):
+        sim, agent = init_scene(scene_file=scene_file, scene_dataset_file=config_file)
+        get_all_images(sim,
+                       agent,
+                       scene_name=scene_file.split(os.sep)[-2],
+                       save_folder=save_folder,
+                       display=False)
+        sim.close()
+        agent.close()
+
+    train_folder = os.path.join(dataset_main_path, "train")
+    val_folder = os.path.join(dataset_main_path, "val")
+
+    train_config_file = os.path.join(train_folder, "hm3d_annotated_train_basis.scene_dataset_config.json")
+    val_config_file = os.path.join(val_folder, "hm3d_annotated_val_basis.scene_dataset_config.json")
+
+    for i, folder in enumerate(os.listdir(train_folder)):
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+        print("Train: " + str(i + 1) + "/" + str(len(os.listdir(train_folder))))
+        folder_path = os.path.join(train_folder, folder)
+        if os.path.isdir(folder_path):
+            alphabets = folder.split("-")[-1]
+            file_name = f"{alphabets}.basis.glb"
+
+            semantic_file_path = os.path.join(folder_path, f"{alphabets}.semantic.glb")
+            if not os.path.exists(semantic_file_path):
+                print("Semantic file does not exist for", folder_path)
+                continue
+
+            scene_file = os.path.join(folder_path, file_name)
+            _get_scene_data(scene_file, train_config_file, save_folder + "train" + os.sep)
+
+    for i, folder in enumerate(os.listdir(val_folder)):
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+        print("Val: " + str(i + 1) + "/" + str(len(os.listdir(val_folder))))
+        folder_path = os.path.join(val_folder, folder)
+        if os.path.isdir(folder_path):
+            alphabets = folder.split("-")[-1]
+            file_name = f"{alphabets}.basis.glb"
+
+            semantic_file_path = os.path.join(folder_path, f"{alphabets}.semantic.glb")
+            if not os.path.exists(semantic_file_path):
+                print("Semantic file does not exist for", folder_path)
+                continue
+
+            scene_file = os.path.join(folder_path, file_name)
+            _get_scene_data(scene_file, val_config_file, save_folder + "val" + os.sep)
+
+
+if __name__ == "__main__":
+    get_all_scenes()
