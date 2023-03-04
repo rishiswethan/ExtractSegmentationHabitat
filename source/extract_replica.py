@@ -12,10 +12,6 @@ import shutil
 import traceback
 
 
-# floor_labels = ['floor', 'rug']
-# wall_labels = ['wall']
-# ceiling_labels = ['ceiling']
-
 label_lists = {
     'floor': ['floor', 'rug'],
     'wall': ['wall'],
