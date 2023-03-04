@@ -143,7 +143,7 @@ def make_cfg(settings):
 
 
 def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
-    rgb_img = Image.fromarray(rgb_obs, mode="RGBA")
+    rgb_img = Image.fromarray(rgb_obs)
 
     arr = [rgb_img, semantic_obs]
     titles = ["rgb", "semantic"]
@@ -512,8 +512,8 @@ def get_all_images(
                         cv2.imwrite(os.path.join(save_folder + "images", sub_folder_1, sub_folder_2, file + ".jpg"), cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
                         cv2.imwrite(os.path.join(save_folder + "masks", sub_folder_1, sub_folder_2, file + ".png"), mask)
 
-                        # if display:
-                        #     display_sample(rgb_obs=rgb, semantic_obs=semantic)
+                        if display:
+                            display_sample(rgb_obs=rgb, semantic_obs=semantic)
 
 
 # function only deletes the contents of the folder of each scene, and not the folder itself. Delete all folders manually if needed in train or val folder
@@ -573,4 +573,13 @@ def get_all_scenes(
 
 
 if __name__ == "__main__":
+    # sim, agent = init_scene(scene_file=scene_file_def, scene_dataset_file=scene_dataset_json_def)
+    # get_all_images(sim,
+    #                agent,
+    #                scene_name=scene_file_def.split(os.sep)[-2],
+    #                save_folder=output_path,
+    #                display=True)
+    # sim.close()
+    # agent.close()
+
     get_all_scenes()
