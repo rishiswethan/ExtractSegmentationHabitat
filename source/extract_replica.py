@@ -184,7 +184,7 @@ def get_images_from_all_folders(main_folder, target_folder):
             # save the image
             image_name = str(folder) + "_" + str(cnt) + ".jpg"
             image_path = os.path.join(target_folder, "images", str(folder), image_name)
-            cv2.imwrite(image_path, rgb_image)
+            cv2.imwrite(image_path, cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR))
 
             # save the mask
             mask_name = str(folder) + "_" + str(cnt) + ".png"

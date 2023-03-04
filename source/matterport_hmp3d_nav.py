@@ -573,11 +573,12 @@ def get_all_scenes(
 
 
 if __name__ == "__main__":
-    # sim, agent = init_scene(scene_file=scene_file_def, scene_dataset_file=scene_dataset_json_def)
+    # sim, agent = init_scene(scene_file="/home/rishi/programming/AI/experiments/datasets_extractor/data/Replica/apartment_0/habitat/mesh_semantic.ply",
+    #                         scene_dataset_file="/home/rishi/programming/AI/experiments/datasets_extractor/data/Replica/apartment_0/habitat/info_semantic.json")
     # get_all_images(sim,
     #                agent,
     #                scene_name=scene_file_def.split(os.sep)[-2],
-    #                save_folder=output_path,
+    #                save_folder="/media/rishi/887C886A7C88553A/datasets_extracted/replica/media/rishi/887C886A7C88553A/datasets_extracted/replica",
     #                display=True)
     # sim.close()
     # agent.close()
